@@ -65,6 +65,30 @@ module LitleOnline
       assert_equal 1, counts[:total]
     end
     
+    def test_account_update_with_token
+      Configuration.any_instance.stubs(:config).returns({'currency_merchant_map'=>{'DEFAULT'=>'1'}, 'user'=>'a','password'=>'b','version'=>'8.10'}).once
+      File.expects(:open).with(regexp_matches(/.*batch_.*\d.*/), 'a+').once
+      File.expects(:open).with(regexp_matches(/.*batch_.*\d_txns.*/), 'a+').twice
+      File.expects(:open).with(regexp_matches(/.*batch_.*\d.*/), 'wb').once
+      File.expects(:directory?).returns(true).once
+      
+      accountUpdateHash = {
+        'reportGroup'=>'Planets',
+        'id'=>'12345',
+        'customerId'=>'0987',
+        'token'=>{
+        'litleToken'=>'4100000000000001'
+      }}
+      
+      batch = LitleAUBatch.new
+      batch.create_new_batch('D:\Batches\\')
+      batch.account_update(accountUpdateHash)
+      
+      counts = batch.get_counts_and_amounts
+      assert_equal 1, counts[:numAccountUpdates]
+      assert_equal 1, counts[:total]
+    end
+    
     def test_close_batch
       Configuration.any_instance.stubs(:config).returns({'currency_merchant_map'=>{'DEFAULT'=>'1'}, 'user'=>'a','password'=>'b','version'=>'8.10'}).once
       File.expects(:open).with(regexp_matches(/.*batch_.*\d.*/), 'a+').once
