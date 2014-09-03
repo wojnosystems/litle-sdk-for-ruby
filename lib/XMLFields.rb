@@ -40,9 +40,8 @@ module LitleOnline
       end
       @choices.each do |path,node|
         if node.is_present_in? obj
-					if path==:else or not(path.all(xml).empty?)
-          	node.obj_to_xml(obj,xml)
-					else
+          node.obj_to_xml(obj,xml)
+					unless path.eql?(:else)
           	path.first(xml, :ensure_created=>true)
 					end
           return true
