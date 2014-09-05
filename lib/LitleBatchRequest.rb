@@ -71,6 +71,10 @@ module LitleOnline
       @MAX_TXNS_IN_BATCH = 100000
       @au_batch = nil
     end
+
+    def has_transactions?
+      !@txn_counts[:total].eql?(0)
+    end
     
     def create_new_batch(path)
       ts = Time::now.to_i.to_s
@@ -133,16 +137,14 @@ module LitleOnline
       File.rename(@path_to_batch, @path_to_batch + '.closed-' + @txn_counts[:total].to_s)
       @path_to_batch = @path_to_batch + '.closed-' + @txn_counts[:total].to_s
       File.open(@path_to_batch, 'w') do |fo|
-        fo.puts header
+        fo.puts header unless has_transactions?
         File.foreach(txn_location) do |li|
           fo.puts li
         end
         fo.puts('</batchRequest>')
       end
       File.delete(txn_location)
-      if(@au_batch != nil) then
-        @au_batch.close_batch
-      end 
+      @au_batch.close_batch if au_batch?
     end
     
     def authorization(options)
@@ -310,7 +312,7 @@ module LitleOnline
     
     def account_update(options)
        
-      if(@au_batch == nil) then
+      if au_batch?
         @au_batch = LitleAUBatch.new
         @au_batch.create_new_batch(File.dirname(@path_to_batch))
       end 
@@ -326,7 +328,12 @@ module LitleOnline
     def get_au_batch
       return @au_batch
     end
-    
+
+
+    protected
+    def au_batch?
+      !@au_batch.nil?
+    end
     
     private
     
