@@ -137,11 +137,12 @@ module LitleOnline
       File.rename(@path_to_batch, @path_to_batch + '.closed-' + @txn_counts[:total].to_s)
       @path_to_batch = @path_to_batch + '.closed-' + @txn_counts[:total].to_s
       File.open(@path_to_batch, 'w') do |fo|
-        fo.puts header unless has_transactions?
+        put_header = !au_batch? or has_transactions?
+        fo.puts header if put_header
         File.foreach(txn_location) do |li|
           fo.puts li
         end
-        fo.puts('</batchRequest>')
+        fo.puts('</batchRequest>') if put_header
       end
       File.delete(txn_location)
       @au_batch.close_batch if au_batch?
@@ -312,7 +313,7 @@ module LitleOnline
     
     def account_update(options)
        
-      if au_batch?
+      unless au_batch?
         @au_batch = LitleAUBatch.new
         @au_batch.create_new_batch(File.dirname(@path_to_batch))
       end 
