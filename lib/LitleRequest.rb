@@ -353,17 +353,14 @@ module LitleOnline
           # clear out the sFTP outbound dir prior to checking for new files, avoids leaving files on the server
           # if files are left behind we are not counting then towards the expected total
           sftp.dir.foreach('/outbound/') do |entry|
-            if((entry.name =~ /request_\d+.complete.asc\z/) != nil) then
+            if((entry.name =~ /request_\d+\.complete\.asc\z/) != nil)
               sftp.download!('/outbound/' + entry.name, response_path + entry.name.gsub('request', 'response') + '.received')
-              3.times{
-                begin
-                  sftp.remove!('/outbound/' + entry.name)
-                  break
-                rescue Net::SFTP::StatusException
-                #try, try, try again
-                  puts "We couldn't remove it! Try again"
-                end
-              }
+              responses_grabbed += 1
+              remove_file_from_outbound_directory( sftp, entry.name )
+            elsif((entry.name =~ /\d+\.\d+\.\d+\.rfr\.asc\z/) != nil)
+              sftp.download!('/outbound/' + entry.name, response_path + 'response_' + entry.name[/[0-9.]+/].gsub('.','') + '.complete.asc.received')
+              responses_grabbed += 1
+              remove_file_from_outbound_directory( sftp, entry.name )
             end
           end
         end
@@ -375,18 +372,14 @@ module LitleOnline
             #sleep for 60 seconds, ¿no es bueno?
             sleep(60)
             sftp.dir.foreach('/outbound/') do |entry|
-              if((entry.name =~ /request_\d+.complete.asc\z/) != nil) then
+              if((entry.name =~ /request_\d+\.complete\.asc\z/) != nil)
                 sftp.download!('/outbound/' + entry.name, response_path + entry.name.gsub('request', 'response') + '.received')
                 responses_grabbed += 1
-                3.times{
-                  begin
-                    sftp.remove!('/outbound/' + entry.name)
-                    break
-                  rescue Net::SFTP::StatusException
-                  #try, try, try again
-                    puts "We couldn't remove it! Try again"
-                  end
-                }
+                remove_file_from_outbound_directory( sftp, entry.name )
+              elsif((entry.name =~ /\d+\.\d+\.\d+\.rfr\.asc\z/) != nil)
+                sftp.download!('/outbound/' + entry.name, response_path + 'response_' + entry.name[/[0-9.]+/].gsub('.','') + '.complete.asc.received')
+                responses_grabbed += 1
+                remove_file_from_outbound_directory( sftp, entry.name )
               end
             end
           end
@@ -399,6 +392,19 @@ module LitleOnline
         raise ArgumentError, "The sFTP credentials provided were incorrect. Try again!"
       end
     end
+
+    def remove_file_from_outbound_directory( sftp, entry_name )
+      3.times{
+        begin
+          sftp.remove!('/outbound/' + entry_name)
+          break
+        rescue Net::SFTP::StatusException
+          #try, try, try again
+          puts "We couldn't remove #{entry_name}! Try again"
+        end
+      }
+    end
+    private :remove_file_from_outbound_directory
     
     # Params:
     # +args+:: A +Hash+ containing arguments for the processing process. This hash MUST contain an entry
